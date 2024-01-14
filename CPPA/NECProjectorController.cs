@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿namespace CPPA;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -11,8 +12,8 @@ public class NecProjectorController
     public static void Start()
     {
         Console.Clear();
-        DisplayColoredMessage("\nNEC Projector Control started.", ConsoleColor.Green);
-        DisplayColoredMessage($"Default IP and port: {_projectorIp}:{_networkPort}\n", ConsoleColor.Green);
+        ColoredTerminal.DisplayColoredMessage("\nNEC Projector Control started.", ConsoleColor.Green);
+        ColoredTerminal.DisplayColoredMessage($"Default IP and port: {_projectorIp}:{_networkPort}\n", ConsoleColor.Green);
         while (true)
         {
             Console.WriteLine("\nSelect a command:");
@@ -32,7 +33,7 @@ public class NecProjectorController
             Console.WriteLine("14. Get Channel and Image Port");
             Console.WriteLine("15. Lamp Power Control");
             Console.WriteLine("20. Settings");
-            DisplayColoredMessage("0. <- Back..", ConsoleColor.Red);
+            ColoredTerminal.DisplayColoredMessage("0. <- Back..", ConsoleColor.Red);
             Console.Write("\nEnter your choice: ");
 
             string input = Console.ReadLine();
@@ -175,14 +176,7 @@ public class NecProjectorController
             }
         }
     }
-    
-    private static void DisplayColoredMessage(string message, ConsoleColor textColor, ConsoleColor backgroundColor = ConsoleColor.Black)
-    {
-        Console.BackgroundColor = backgroundColor;
-        Console.ForegroundColor = textColor;
-        Console.WriteLine(message);
-        Console.ResetColor(); // Resets to the default colors.
-    }
+
     private static void ProjSerial()
     {
         using (var client = new TcpClient())
@@ -351,9 +345,7 @@ public class NecProjectorController
 
                 byte[] buffer = new byte[4096];
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
-
-                // The response processing is a bit more custom in your Python script
-                // Adjust according to your specific needs
+                
                 string receivedData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 receivedData = receivedData.Replace("\x86\x00\xc0\x11\x08", string.Empty);
                 receivedData = receivedData.Replace("\x00\x00\x00\x00\x00\x00\x00u", string.Empty);
@@ -418,7 +410,7 @@ public class NecProjectorController
                 var stream = client.GetStream();
                 byte[] message = { 0x02, 0x01, 0x00, 0x00, 0x00, 0x03 };
                 Console.WriteLine($"Message: {BitConverter.ToString(message).Replace("-", ":")}");
-                DisplayColoredMessage("Waiting on cooldown...", ConsoleColor.Green);
+                ColoredTerminal.DisplayColoredMessage("Waiting on cooldown...", ConsoleColor.Green);
                 stream.Write(message, 0, message.Length);
 
                 byte[] buffer = new byte[4096];
@@ -486,8 +478,7 @@ public class NecProjectorController
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
                 string responseHex = BitConverter.ToString(buffer, 0, bytesRead).Replace("-", ":");
                 Console.WriteLine($"Response: {responseHex}");
-
-                // Process response to get serial number (adjust range as needed)
+                
                 string serialNo = Encoding.ASCII.GetString(buffer, 6, 10).Trim('\0');
                 Console.WriteLine($"Got response, Serial Number: {serialNo}");
             }
@@ -506,7 +497,7 @@ public class NecProjectorController
 
     private static void ProjInputSwitchChange(int channelNumber)
     {
-        channelNumber -= 1; // Adjust to zero-based index
+        channelNumber -= 1;
 
         using (var client = new TcpClient())
         {
@@ -718,7 +709,6 @@ public class NecProjectorController
                 if (bytesRead >= 11 && buffer[0] == 0x20 && buffer[1] == 0x85 && buffer[2] == 0x00 &&
                     buffer[3] == 0xC0 && buffer[4] == 0x10)
                 {
-                    // Processing the response
                     string selectingSignalProcessing = buffer[5] switch
                     {
                         0 => "No execution (Normal condition)",
@@ -727,10 +717,9 @@ public class NecProjectorController
                     };
                     Console.WriteLine($"Selecting_signal_processing: {selectingSignalProcessing}");
 
-                    int channel = buffer[6] + 1; // Adjusting to 1-based index
+                    int channel = buffer[6] + 1; // 1-based index
                     Console.WriteLine($"Channel Number: {channel}");
-
-                    // Port Name processing
+                    
                     string portName = GetPortName(buffer[7], buffer[8]);
                     Console.WriteLine($"Port Name: {portName}");
 

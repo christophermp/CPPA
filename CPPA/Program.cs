@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CPPA;
+using System;
 
 public class Program
 {
@@ -21,7 +22,7 @@ public class Program
                     NecProjectorController.Start();
                     break;
                 case "2":
-                    // Other program logic
+                    ChristieProjectorController.Start();
                     break;
                 // Other cases
             }
