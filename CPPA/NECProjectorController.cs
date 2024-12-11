@@ -189,6 +189,13 @@ public class NecProjectorController
                 var stream = client.GetStream();
                 byte[] message = new byte[] { 0x00, 0x86, 0x00, 0xC0, 0x01, 0x08, 0x4f };
                 stream.Write(message, 0, message.Length);
+                // Display NC command
+                NetworkCommandHelper.DisplayNetworkCommand(
+                    NetworkCommandHelper.GetCommandName(message),
+                    message,
+                    _projectorIp,
+                    _networkPort
+                );
 
                 byte[] buffer = new byte[4096];
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -215,6 +222,15 @@ public class NecProjectorController
                 var stream = client.GetStream();
                 byte[] message = { 0x00, 0x85, 0x00, 0x00, 0x01, 0x01, 0x87 };
                 Console.WriteLine($"Message: {BitConverter.ToString(message)}");
+                
+                // Display NC command
+                NetworkCommandHelper.DisplayNetworkCommand(
+                    NetworkCommandHelper.GetCommandName(message),
+                    message,
+                    _projectorIp,
+                    _networkPort
+                );
+                
                 stream.Write(message, 0, message.Length);
 
                 byte[] buffer = new byte[4096];
@@ -342,6 +358,13 @@ public class NecProjectorController
                 var stream = client.GetStream();
                 byte[] message = { 0x00, 0x85, 0x00, 0x00, 0x01, 0xE6, 0x6C };
                 stream.Write(message, 0, message.Length);
+                // Display NC command
+                NetworkCommandHelper.DisplayNetworkCommand(
+                    NetworkCommandHelper.GetCommandName(message),
+                    message,
+                    _projectorIp,
+                    _networkPort
+                );
 
                 byte[] buffer = new byte[4096];
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -376,6 +399,13 @@ public class NecProjectorController
                 byte[] message = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x02 };
                 Console.WriteLine($"Message: {BitConverter.ToString(message).Replace("-", ":")}");
                 stream.Write(message, 0, message.Length);
+                // Display NC command
+                NetworkCommandHelper.DisplayNetworkCommand(
+                    NetworkCommandHelper.GetCommandName(message),
+                    message,
+                    _projectorIp,
+                    _networkPort
+                );
 
                 byte[] buffer = new byte[4096];
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -412,6 +442,13 @@ public class NecProjectorController
                 Console.WriteLine($"Message: {BitConverter.ToString(message).Replace("-", ":")}");
                 ColoredTerminal.DisplayColoredMessage("Waiting on cooldown...", ConsoleColor.Green);
                 stream.Write(message, 0, message.Length);
+                // Display NC command
+                NetworkCommandHelper.DisplayNetworkCommand(
+                    NetworkCommandHelper.GetCommandName(message),
+                    message,
+                    _projectorIp,
+                    _networkPort
+                );
 
                 byte[] buffer = new byte[4096];
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -473,6 +510,13 @@ public class NecProjectorController
 
                 Console.WriteLine($"Message: {BitConverter.ToString(message).Replace("-", ":")}");
                 stream.Write(message, 0, message.Length);
+                // Display NC command
+                NetworkCommandHelper.DisplayNetworkCommand(
+                    NetworkCommandHelper.GetCommandName(message),
+                    message,
+                    _projectorIp,
+                    _networkPort
+                );
 
                 byte[] buffer = new byte[4096];
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -510,6 +554,13 @@ public class NecProjectorController
                 messageMain.Add((byte)channelNumber);
                 byte[] cks = { CalculateCks(messageMain.ToArray()) };
                 byte[] message = messageMain.Concat(cks).ToArray();
+                // Display NC command
+                NetworkCommandHelper.DisplayNetworkCommand(
+                    NetworkCommandHelper.GetCommandName(message),
+                    message,
+                    _projectorIp,
+                    _networkPort
+                );
 
                 Console.WriteLine($"Message: {BitConverter.ToString(message).Replace("-", ":")}");
                 var stream = client.GetStream();
@@ -576,6 +627,13 @@ public class NecProjectorController
                 Console.WriteLine($"Message: {BitConverter.ToString(message).Replace("-", ":")}");
                 var stream = client.GetStream();
                 stream.Write(message, 0, message.Length);
+                // Display NC command
+                NetworkCommandHelper.DisplayNetworkCommand(
+                    NetworkCommandHelper.GetCommandName(message),
+                    message,
+                    _projectorIp,
+                    _networkPort
+                );
 
                 byte[] buffer = new byte[4096];
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -896,5 +954,48 @@ public class NecProjectorController
                 Console.WriteLine($"Error: {ex.Message}");
             }
         }
+    }
+}
+
+
+public static class NetworkCommandHelper
+{
+    public static void DisplayNetworkCommand(string commandName, byte[] message, string ip, int port)
+    {
+        // Convert the byte array to space-separated hex string
+        string hexData = BitConverter.ToString(message).Replace("-", " ");
+        
+        // Format the complete NC command for terminal use
+        string ncCommand = $"nc -w1 {ip} {port} < <(echo -en \"\\x{hexData.Replace(" ", "\\x")}\")";
+        
+        Console.WriteLine("\nNetwork Command:");
+        ColoredTerminal.DisplayColoredMessage($"# {commandName}", ConsoleColor.Yellow);
+        ColoredTerminal.DisplayColoredMessage(ncCommand, ConsoleColor.Cyan);
+    }
+
+    public static string GetCommandName(byte[] message)
+    {
+        if (message.Length < 2) return "Unknown";
+        
+        return (message[0], message[1]) switch
+        {
+            (0x00, 0x85) when message.Length >= 5 && message[4] == 0x01 && message[5] == 0x01 => "Get Power Status",
+            (0x00, 0x85) when message.Length >= 5 && message[4] == 0x01 && message[5] == 0x02 => "Get Input Status",
+            (0x00, 0x85) when message.Length >= 5 && message[4] == 0x01 && message[5] == 0x03 => "Get Mute Status",
+            (0x00, 0x85) when message.Length >= 5 && message[4] == 0x01 && message[5] == 0xE6 => "Get Current Scene",
+            (0x00, 0x86) when message.Length >= 5 && message[4] == 0x01 && message[5] == 0x08 => "Get Version Data",
+            (0x02, 0x00) => "Power On",
+            (0x02, 0x01) => "Power Off",
+            (0x02, 0x03) => "Switch Channel",
+            (0x02, 0x10) => "Picture Mute On",
+            (0x02, 0x11) => "Picture Mute Off",
+            (0x02, 0x16) => "Close Dowser",
+            (0x02, 0x17) => "Open Dowser",
+            (0x03, 0x94) => "Get Lamp Info",
+            (0x03, 0x2F) when message.Length >= 6 && message[5] == 0x12 && message[6] == 0x01 => "Lamp Power On",
+            (0x03, 0x2F) when message.Length >= 6 && message[5] == 0x12 && message[6] == 0x02 => "Lamp Power Off",
+            (0x03, 0x2F) when message.Length >= 6 && message[5] == 0x11 => "Get Lamp Mode",
+            _ => "Unknown Command"
+        };
     }
 }
